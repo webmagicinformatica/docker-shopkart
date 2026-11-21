@@ -1,0 +1,65 @@
+# ShopKart on a server: only images from a registry (no builds, no files from the repo).
+#   IMAGE_PREFIX=ghcr.io/<you> TAG=sha-1234567 docker --context shopkart-server compose -f labs/ci-cd/deploy/compose.yaml up -d --wait
+name: shopkart
+
+services:
+  web:
+    image: ${IMAGE_PREFIX:?set IMAGE_PREFIX, e.g. ghcr.io/your-user}/shopkart-web:${TAG:?set TAG}
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    image: ${IMAGE_PREFIX}/shopkart-api:${TAG}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://shopkart:shopkart@db:5432/shopkart
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: warning
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # One-off job before the API starts: creates and seeds the products table (safe to repeat)
+  seed:
+    image: ${IMAGE_PREFIX}/shopkart-api:${TAG}
+    command: ["python", "-m", "shopkart_api.seed"]
+    environment:
+      DATABASE_URL: postgresql://shopkart:shopkart@db:5432/shopkart
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17.12-alpine
+    environment:
+      POSTGRES_USER: shopkart
+      POSTGRES_PASSWORD: shopkart      # on a real server: a secret file, as in the config lab
+      POSTGRES_DB: shopkart
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "shopkart", "-d", "shopkart"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8.8.4-alpine
+    restart: unless-stopped
+
+volumes:
+  db-data:

@@ -1,0 +1,18 @@
+# Dev overrides. Compose merges this file automatically when you run `docker compose` in this folder
+# (or name both files with -f). Never used in CI or production.
+services:
+  api:
+    environment:
+      APP_ENV: dev
+      LOG_LEVEL: debug
+    # Your code, live, from the repo; uvicorn restarts on every save
+    volumes:
+      - ../../../app/api:/app
+    command: ["uvicorn", "shopkart_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "8000:8000"
+
+  db:
+    # Reach PostgreSQL from tools in the codespace
+    ports:
+      - "5432:5432"

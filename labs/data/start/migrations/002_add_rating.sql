@@ -1,0 +1,3 @@
+-- 002: products get a customer rating (0.0 to 5.0). Make it safe to run more than once.
+-- TODO: ALTER TABLE products ADD COLUMN IF NOT EXISTS rating NUMERIC(2,1);
+-- TODO: give each product a rating (UPDATE ... WHERE rating IS NULL)

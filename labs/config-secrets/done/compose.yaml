@@ -1,0 +1,50 @@
+# One image, any environment: settings from env/<name>.env, the DB password from a secret file.
+#   SHOPKART_ENV=staging docker compose -f labs/config-secrets/done/compose.yaml up -d --wait
+name: shopkart-config
+
+services:
+  api:
+    image: shopkart-api:1.2      # built once: docker build --build-arg APP_VERSION=1.2 -t shopkart-api:1.2 app/api
+    env_file:
+      - env/${SHOPKART_ENV:-dev}.env
+    environment:
+      # No password in the URL: the API reads it from the file named in DATABASE_PASSWORD_FILE
+      DATABASE_URL: postgresql://shopkart@db:5432/shopkart
+      DATABASE_PASSWORD_FILE: /run/secrets/db_password
+      REDIS_URL: redis://redis:6379/0
+    secrets:
+      - db_password
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  db:
+    image: postgres:17.12-alpine
+    environment:
+      POSTGRES_USER: shopkart
+      POSTGRES_DB: shopkart
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ../../../app/api/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "shopkart", "-d", "shopkart"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8.8.4-alpine
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt     # created by you, never committed (.gitignore)
+
+volumes:
+  db-data:

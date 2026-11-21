@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+# The fix: the build secret is mounted for ONE step and never stored in a layer.
+# Runtime secrets (the payment key) come from the environment or a secrets file at run time.
+FROM python:3.12.16-alpine3.24
+WORKDIR /app
+COPY requirements.txt .
+RUN --mount=type=secret,id=pip_index_token,env=PIP_INDEX_TOKEN \
+    test -n "$PIP_INDEX_TOKEN" && echo "token is available during this step only" \
+ && pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["uvicorn", "shopkart_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

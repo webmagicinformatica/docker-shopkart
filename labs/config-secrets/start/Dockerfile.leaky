@@ -1,0 +1,12 @@
+# DON'T DO THIS: a secret passed as a build argument and an environment variable.
+# Both end up in the image for anyone who can pull it.
+FROM python:3.12.16-alpine3.24
+ARG PIP_INDEX_TOKEN
+# "Our private package index needs a token to install dependencies"
+ENV PAYMENT_API_KEY=pk_live_shopkart_51NdemoKEYdoNotUse
+WORKDIR /app
+COPY requirements.txt .
+RUN echo "authenticating to the private index with ${PIP_INDEX_TOKEN}" > /dev/null \
+ && pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["uvicorn", "shopkart_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

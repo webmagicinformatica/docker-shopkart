@@ -1,0 +1,80 @@
+# Harden ShopKart (fill in the TODOs): non-root everywhere, read-only root filesystems, no Linux capabilities,
+# no privilege escalation, and limits on memory and processes.
+#   docker compose -f labs/security/done/compose.yaml up -d --build --wait
+name: shopkart-secure
+
+x-hardening: &hardening
+  # TODO: read_only: true
+  # TODO: cap_drop: [ALL]
+  # TODO: security_opt: ["no-new-privileges:true"]
+  # TODO: pids_limit: 100
+  {}
+
+services:
+  web:
+    <<: *hardening
+    image: nginxinc/nginx-unprivileged:1.30.6-alpine     # runs as user nginx (101), listens on 8080 (already done for you)
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../../app/web:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    tmpfs:
+      - /tmp                     # nginx's pid file and temp files
+    mem_limit: 64m
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    <<: *hardening
+    build:
+      context: ../../../app/api
+      dockerfile: ../../labs/security/start/Dockerfile
+    image: shopkart-api:secure
+    # TODO: user: "10001:10001"
+    environment:
+      DATABASE_URL: postgresql://shopkart:shopkart@db:5432/shopkart
+      REDIS_URL: redis://redis:6379/0
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    <<: *hardening
+    image: postgres:17.12-alpine
+    # TODO: user: postgres (uid 70)
+    environment:
+      POSTGRES_USER: shopkart
+      POSTGRES_PASSWORD: shopkart
+      POSTGRES_DB: shopkart
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ../../../app/api/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    # TODO: tmpfs for /var/run/postgresql (socket + lock file) and /tmp
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "shopkart", "-d", "shopkart"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    <<: *hardening
+    image: redis:8.8.4-alpine
+    # TODO: user: redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]   # the cart is a cache: nothing on disk
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  db-data:

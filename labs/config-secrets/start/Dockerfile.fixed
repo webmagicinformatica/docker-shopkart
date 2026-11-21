@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+# Fix the leaks from Dockerfile.leaky.
+FROM python:3.12.16-alpine3.24
+WORKDIR /app
+COPY requirements.txt .
+# TODO: remove the ARG and the ENV with the payment key.
+# TODO: mount the build secret "pip_index_token" as env PIP_INDEX_TOKEN for this RUN only:
+#       RUN --mount=type=secret,id=pip_index_token,env=PIP_INDEX_TOKEN ...
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["uvicorn", "shopkart_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

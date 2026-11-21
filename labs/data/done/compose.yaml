@@ -1,0 +1,50 @@
+# ShopKart data lab: the API and PostgreSQL, plus a one-off "migrate" job.
+#   docker compose -f labs/data/done/compose.yaml up -d --wait
+#   docker compose -f labs/data/done/compose.yaml run --rm migrate
+name: shopkart-data
+
+services:
+  api:
+    image: shopkart-api:1.2
+    environment:
+      DATABASE_URL: postgresql://shopkart:shopkart@db:5432/shopkart
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17.12-alpine
+    environment:
+      POSTGRES_USER: shopkart
+      POSTGRES_PASSWORD: shopkart
+      POSTGRES_DB: shopkart
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ../../../app/api/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "shopkart", "-d", "shopkart"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # A one-off job: runs the migration files in order, then exits. Only runs when you ask:
+  # `docker compose run --rm migrate`
+  migrate:
+    image: postgres:17.12-alpine
+    profiles: [jobs]
+    environment:
+      PGHOST: db
+      PGUSER: shopkart
+      PGPASSWORD: shopkart
+      PGDATABASE: shopkart
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint: ["sh", "-c", "for f in /migrations/*.sql; do echo \"applying $$f\"; psql -v ON_ERROR_STOP=1 -q -f \"$$f\" || exit 1; done"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

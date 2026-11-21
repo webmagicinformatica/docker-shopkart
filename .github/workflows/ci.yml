@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/api/requirements-dev.txt
+
+      - name: Unit tests (no Docker, no database)
+        working-directory: app/api
+        run: |
+          pip install -r requirements-dev.txt
+          pytest -q
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: app/api
+          load: true
+          tags: shopkart-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test the image
+        run: |
+          docker run -d --name api -p 8000:8000 shopkart-api:ci
+          for i in $(seq 20); do curl -fsS localhost:8000/health && break; sleep 1; done
+          curl -fsS localhost:8000/api/products | python3 -c 'import json,sys; assert len(json.load(sys.stdin)) == 8'
+          docker images shopkart-api:ci
+
+      - name: Full stack test (web, API, PostgreSQL, Redis)
+        run: |
+          docker compose -f labs/compose/done/compose.yaml up -d --build --wait
+          curl -fsS localhost:8080/health
+          curl -fsS -X POST localhost:8080/api/cart/ci/items -H 'Content-Type: application/json' -d '{"product_id": 2, "qty": 1}'
+          docker compose -f labs/compose/done/compose.yaml down -v

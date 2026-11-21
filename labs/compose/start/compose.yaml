@@ -1,0 +1,39 @@
+# Lab: the ShopKart stack in one file. Fill in the TODOs.
+# Run from the repo root: docker compose -f labs/compose/start/compose.yaml up -d --build
+# Paths are relative to THIS file: the repo root is ../../../
+name: shopkart
+
+services:
+  web:
+    image: nginx:1.30.7-alpine
+    # TODO: publish port 8080 -> 80
+    # TODO: mount ../../../app/web read-only at /usr/share/nginx/html
+    # TODO: mount ../../../app/nginx/default.conf read-only at /etc/nginx/conf.d/default.conf
+    # TODO: start after api
+
+  api:
+    # TODO: build from ../../../app/api, and name the image shopkart-api:compose
+    environment:
+      DATABASE_URL: postgresql://shopkart:shopkart@db:5432/shopkart
+      # TODO: REDIS_URL pointing at the redis service (redis://<service name>:6379/0)
+    ports:
+      - "8000:8000"
+    # TODO: start after db and redis
+
+  db:
+    image: postgres:17.12-alpine
+    # TODO: POSTGRES_USER, POSTGRES_PASSWORD and POSTGRES_DB = shopkart
+    # TODO: a named volume db-data at /var/lib/postgresql/data
+    # TODO: mount ../../../app/api/seed.sql into /docker-entrypoint-initdb.d/
+
+  redis:
+    image: redis:8.8.4-alpine
+
+# TODO: declare the db-data volume
+
+# ---- Part 2 ----
+# TODO: healthchecks: db (pg_isready -h 127.0.0.1 ...), redis (redis-cli ping), api (/health), web (/health)
+# TODO: depends_on with condition: service_healthy, and restart: unless-stopped
+# TODO: a psql service in a "tools" profile
+# TODO: develop.watch on api: sync+restart for shopkart_api/, rebuild for requirements.txt
+# TODO: a compose.override.yaml next to this file for dev (bind mount + --reload, APP_ENV=dev)

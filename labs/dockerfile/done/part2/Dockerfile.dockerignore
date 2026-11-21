@@ -1,0 +1,9 @@
+# Only for done/part2/Dockerfile (Docker reads <Dockerfile>.dockerignore next to the Dockerfile)
+__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+*.db
+.env
+.env.*
+Dockerfile*

@@ -1,0 +1,29 @@
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+!labs/**/env/*.env
+*.pem
+*.key
+secrets/
+!labs/**/secrets/
+labs/**/secrets/*.txt
+!labs/**/secrets/*.example.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.db
+
+# Lab output
+backups/
+*.tar
+*.tar.gz
+sbom*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db

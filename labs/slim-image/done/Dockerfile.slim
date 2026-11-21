@@ -1,0 +1,8 @@
+# Step 1: same app, slim base, no extra tools, dependencies before code.
+FROM python:3.12.16-slim-trixie
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "shopkart_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

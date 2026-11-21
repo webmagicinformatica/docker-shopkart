@@ -1,0 +1,7 @@
+# The "before" image: the full Python image, compilers and tools "just in case", everything in one stage.
+FROM python:3.12.16-trixie
+RUN apt-get update && apt-get install -y build-essential git vim curl
+WORKDIR /app
+COPY . .
+RUN pip install -r requirements.txt
+CMD ["uvicorn", "shopkart_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

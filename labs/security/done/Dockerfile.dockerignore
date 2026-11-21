@@ -1,0 +1,12 @@
+# Keep the build context small and the cache stable
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+tests/
+*.db
+.env
+.env.*
+Dockerfile*
+.dockerignore
