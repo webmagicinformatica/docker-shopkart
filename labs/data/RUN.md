@@ -33,14 +33,14 @@ Status: Downloaded newer image for alpine:3.24.4
  Container shopkart-data-db-1  Starting
  Container shopkart-data-db-1  Started
 total 6.3M
--rw-r--r-- 1 root   root   6.3M Nov 21 20:11 db-volume.tar.gz
--rw-r--r-- 1 vscode vscode 1.8K Nov 21 20:11 shopkart.sql
+-rw-r--r-- 1 root   root   6.3M Nov 21 20:40 db-volume.tar.gz
+-rw-r--r-- 1 vscode vscode 1.8K Nov 21 20:40 shopkart.sql
 $ head -n 5 backups/shopkart.sql
 --
 -- PostgreSQL database dump
 --
 
-\restrict clNub2dFWOk4TVc45pitztnywj8fmcpcMvG9p4HxzVgH8tMwUbMZhCCCBVxwKIa
+\restrict wcLtRfbiQD6iIFuKyj9g6sJUMkOVIOfBWRcxgQlXoinc2bSEoeKL0jUAtgrxpdi
 ```
 
 ## 3. Disaster: wipe everything
@@ -77,14 +77,10 @@ $ curl -s localhost:8000/api/products/9; echo
 ```console
 $ docker compose -f labs/data/done/compose.yaml down -v 2>&1 | tail -n 1
  Network shopkart-data_default  Removed
-$ docker volume create shopkart-data_db-data
-shopkart-data_db-data
+$ docker compose -f labs/data/done/compose.yaml up --no-start 2>&1 | tail -n 1
+ Container shopkart-data-api-1  Created
 $ docker run --rm -v shopkart-data_db-data:/data -v "$PWD/backups:/backup:ro" alpine:3.24.4 tar xzf /backup/db-volume.tar.gz -C /data
-$ docker compose -f labs/data/done/compose.yaml up -d --wait 2>&1 | grep -v -E 'Waiting|Starting|Created|Creating'
-time="2026-11-21T20:11:33Z" level=warning msg="volume \"shopkart-data_db-data\" already exists but was not created by Docker Compose. Use `external: true` to use an existing volume"
- Container shopkart-data-db-1  Started
- Container shopkart-data-db-1  Healthy
- Container shopkart-data-api-1  Started
+$ docker compose -f labs/data/done/compose.yaml up -d --wait 2>&1 | tail -n 2
  Container shopkart-data-db-1  Healthy
  Container shopkart-data-api-1  Healthy
 $ curl -s localhost:8000/api/products/9; echo
@@ -103,13 +99,11 @@ UPDATE products SET rating = CASE id
     ELSE 4.0 END
 WHERE rating IS NULL;
 $ docker compose -f labs/data/done/compose.yaml run --rm migrate
-time="2026-11-21T20:11:47Z" level=warning msg="volume \"shopkart-data_db-data\" already exists but was not created by Docker Compose. Use `external: true` to use an existing volume"
  Container shopkart-data-db-1  Running
 applying /migrations/002_add_rating.sql
 $ curl -s localhost:8000/api/products/2; echo
 {"id":2,"name":"Running Shoes","category":"Footwear","price_inr":2499,"stock":25,"rating":4.6}
 $ docker compose -f labs/data/done/compose.yaml run --rm migrate
-time="2026-11-21T20:11:49Z" level=warning msg="volume \"shopkart-data_db-data\" already exists but was not created by Docker Compose. Use `external: true` to use an existing volume"
  Container shopkart-data-db-1  Running
 applying /migrations/002_add_rating.sql
 psql:/migrations/002_add_rating.sql:2: NOTICE:  column "rating" of relation "products" already exists, skipping

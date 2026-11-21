@@ -21,6 +21,9 @@ $ cat labs/security/count.tpl
 {{- range . }}{{ .Target }}: {{ len .Vulnerabilities }}
 {{ end -}}
 $ ./labs/security/trivy.sh image --quiet --scanners vuln --severity HIGH,CRITICAL --format template --template @labs/security/count.tpl shopkart-api:fat | grep -v ': 0$'
+[... 17 earlier lines of output cut ...]
+Digest: sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+Status: Downloaded newer image for aquasec/trivy:0.76.2
 shopkart-api:fat (debian 13.7): 552
 ```
 
@@ -29,21 +32,20 @@ shopkart-api:fat (debian 13.7): 552
 ```console
 $ ./labs/security/trivy.sh image --quiet --scanners vuln --severity HIGH,CRITICAL --format template --template @labs/security/count.tpl shopkart-api:small | grep -v ': 0$'
 shopkart-api:small (alpine 3.24.4): 16
-$ ./labs/security/trivy.sh image --quiet --scanners vuln --severity HIGH,CRITICAL shopkart-api:small 2>&1 | head -n 14
+$ ./labs/security/trivy.sh image --quiet --scanners vuln --severity HIGH,CRITICAL --pkg-types os --table-mode detailed shopkart-api:small 2>&1 | head -n 13
 
-Report Summary
+shopkart-api:small (alpine 3.24.4)
+==================================
+Total: 16 (HIGH: 16, CRITICAL: 0)
 
-┌───────────────────────────────────────────────────────────────────────────────┬────────────┬─────────────────┐
-│                                    Target                                     │    Type    │ Vulnerabilities │
-├───────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
-│ shopkart-api:small (alpine 3.24.4)                                            │   alpine   │       16        │
-├───────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
-│ usr/local/lib/python3.12/site-packages/pip-25.0.1.dist-info/METADATA          │ python-pkg │        0        │
-├───────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
-│ venv/lib/python3.12/site-packages/annotated_doc-0.0.7.dist-info/METADATA      │ python-pkg │        0        │
-├───────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
-│ venv/lib/python3.12/site-packages/annotated_types-0.8.0.dist-info/METADATA    │ python-pkg │        0        │
-├───────────────────────────────────────────────────────────────────────────────┼────────────┼─────────────────┤
+┌───────────┬─────────────────┬──────────┬────────┬───────────────────┬───────────────┬──────────────────────────────────────────────────────────────┐
+│  Library  │  Vulnerability  │ Severity │ Status │ Installed Version │ Fixed Version │                            Title                             │
+├───────────┼─────────────────┼──────────┼────────┼───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ krb5-libs │ CVE-2026-107364 │ HIGH     │ fixed  │ 1.22.2-r1         │ 1.22.3-r0     │ krb5: Unauthenticated KDC DoS based on ASN.1 decoder read    │
+│           │                 │          │        │                   │               │ overrun                                                      │
+│           │                 │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2026-107364                  │
+│           ├─────────────────┤          │        │                   │               ├──────────────────────────────────────────────────────────────┤
+│           │ CVE-2026-112315 │          │        │                   │               │ krb5: MIT krb5 kadmind unauthenticated memory leak DoS in    │
 ```
 
 ## Part 1. Fix: patched packages, non-root user
@@ -81,10 +83,10 @@ $ diff labs/security/start/Dockerfile labs/security/done/Dockerfile
 > HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
 >   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
 $ docker build -f labs/security/done/Dockerfile -t shopkart-api:secure app/api
-[... 52 earlier lines of output cut ...]
-#14 naming to docker.io/library/shopkart-api:secure done
-#14 unpacking to docker.io/library/shopkart-api:secure 0.0s done
-#14 DONE 0.2s
+[... 54 earlier lines of output cut ...]
+#14 unpacking to docker.io/library/shopkart-api:secure
+#14 unpacking to docker.io/library/shopkart-api:secure 0.6s done
+#14 DONE 0.8s
 $ ./labs/security/trivy.sh image --quiet --scanners vuln --severity HIGH,CRITICAL --format template --template @labs/security/count.tpl shopkart-api:secure | grep -v ': 0$' || echo 'no HIGH or CRITICAL vulnerabilities'
 no HIGH or CRITICAL vulnerabilities
 ```
@@ -110,10 +112,10 @@ $ python3 -c "import json; d = json.load(open('sbom-shopkart.json')); libs = [c[
 
 ```console
 $ docker compose -f labs/security/done/compose.yaml up -d --build --wait 2>&1 | tail -n 4
- Container shopkart-secure-api-1  Healthy
- Container shopkart-secure-web-1  Healthy
- Container shopkart-secure-redis-1  Healthy
  Container shopkart-secure-db-1  Healthy
+ Container shopkart-secure-redis-1  Healthy
+ Container shopkart-secure-web-1  Healthy
+ Container shopkart-secure-api-1  Healthy
 $ curl -s localhost:8080/health; echo
 {"status":"ok","db":"ok","cart":"ok"}
 ```
@@ -155,24 +157,24 @@ e79a20f65ccf: Pulling fs layer
 4f4fb700ef54: Pulling fs layer
 80a1fa15fb80: Pulling fs layer
 554970c1d0af: Pulling fs layer
+a5da4a42f190: Pulling fs layer
 dd5c7ebbff8d: Pulling fs layer
 c0f0ba247ae4: Pulling fs layer
-a5da4a42f190: Pulling fs layer
 d5681b4d7626: Pulling fs layer
-881fc932939e: Already exists
-e79a20f65ccf: Already exists
-4f4fb700ef54: Already exists
-a5da4a42f190: Already exists
-c01e603afa82: Already exists
-80a1fa15fb80: Already exists
-554970c1d0af: Already exists
 dd5c7ebbff8d: Already exists
 c0f0ba247ae4: Already exists
+881fc932939e: Already exists
+e79a20f65ccf: Already exists
 d5681b4d7626: Already exists
+c01e603afa82: Already exists
+4f4fb700ef54: Already exists
+80a1fa15fb80: Already exists
+554970c1d0af: Already exists
+a5da4a42f190: Already exists
 33bba5e636b0: Download complete
 Digest: sha256:34507eb5069d8be82c95dd3b6987d4250fd5fee49b82e2509b7d7a7030740d6d
 Status: Downloaded newer image for docker:29.10.0-cli
-stoic_benz
+dazzling_poincare
 shopkart-secure-web-1
 shopkart-secure-api-1
 shopkart-secure-db-1

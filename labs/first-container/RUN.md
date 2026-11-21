@@ -9,16 +9,16 @@ Terminal 1 (left running, then stopped with Ctrl+C):
 ```console
 $ timeout -s INT 28 ./scripts/run-local.sh
 INFO shopkart: ShopKart dev starting (env=local, db=sqlite)
-INFO:     Started server process [1272]
+INFO:     Started server process [41441]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:38274 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:38284 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45526 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45534 - "GET /api/products HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [1272]
+INFO:     Finished server process [41441]
 ```
 
 Terminal 2, while it runs:
@@ -67,6 +67,14 @@ Server: Docker Engine - Community
 
 ```console
 $ docker run hello-world
+Unable to find image 'hello-world:latest' locally
+latest: Pulling from library/hello-world
+4f55086f7dd0: Pulling fs layer
+4f55086f7dd0: Download complete
+4f55086f7dd0: Pull complete
+d5e71e642bf5: Download complete
+Digest: sha256:1e4c05b897a751332ce85c7e9449da2d93514ea2dea6dbb0e2753c9e949b2bfa
+Status: Downloaded newer image for hello-world:latest
 
 Hello from Docker!
 This message shows that your installation appears to be working correctly.
@@ -95,10 +103,40 @@ For more examples and ideas, visit:
 
 ```console
 $ docker run -d --name web -p 8080:80 nginx:1.30.7-alpine
-f7e3ade01c69b4188f40671793a2b6e814b09a624148986fcc74029ebecf148d
+Unable to find image 'nginx:1.30.7-alpine' locally
+1.30.7-alpine: Pulling from library/nginx
+893b1907c4dc: Pulling fs layer
+c188e096e949: Pulling fs layer
+881fc932939e: Pulling fs layer
+1197128e240d: Pulling fs layer
+2631dab31190: Pulling fs layer
+cc0947b1a774: Pulling fs layer
+4f56c5508527: Pulling fs layer
+61e5576dbd35: Pulling fs layer
+c188e096e949: Download complete
+893b1907c4dc: Download complete
+881fc932939e: Download complete
+1197128e240d: Download complete
+2631dab31190: Download complete
+cc0947b1a774: Download complete
+61e5576dbd35: Download complete
+4f56c5508527: Download complete
+881fc932939e: Pull complete
+359761868b5a: Download complete
+1197128e240d: Pull complete
+cd2bd754171e: Download complete
+c188e096e949: Pull complete
+2631dab31190: Pull complete
+cc0947b1a774: Pull complete
+4f56c5508527: Pull complete
+61e5576dbd35: Pull complete
+893b1907c4dc: Pull complete
+Digest: sha256:caf4e1e032a20f9c3c5e28fc7f25ffd768ad8677b4975c54193075997b3a97e3
+Status: Downloaded newer image for nginx:1.30.7-alpine
+0b85be73170dd48a47ea6908d6b8198f3c6f8d01d500615f30c42a99fbfb612b
 $ docker ps
 CONTAINER ID   IMAGE                 COMMAND                  CREATED         STATUS         PORTS                                     NAMES
-f7e3ade01c69   nginx:1.30.7-alpine   "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   web
+0b85be73170d   nginx:1.30.7-alpine   "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   web
 $ curl -s localhost:8080 | head -n 4
 <!DOCTYPE html>
 <html>
@@ -112,14 +150,6 @@ $ curl -s localhost:8080 | head -n 4
 $ docker logs web
 /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
 /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
-2026/11/21 19:51:34 [notice] 1#1: using the "epoll" event method
-2026/11/21 19:51:34 [notice] 1#1: nginx/1.30.7
-2026/11/21 19:51:34 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) 
-2026/11/21 19:51:34 [notice] 1#1: OS: Linux 7.0.0-1017-azure
-2026/11/21 19:51:34 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1024:524288
-2026/11/21 19:51:34 [notice] 1#1: start worker processes
-2026/11/21 19:51:34 [notice] 1#1: start worker process 30
-2026/11/21 19:51:34 [notice] 1#1: start worker process 31
 /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
 10-listen-on-ipv6-by-default.sh: info: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
@@ -127,14 +157,21 @@ $ docker logs web
 /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
 /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
 /docker-entrypoint.sh: Configuration complete; ready for start up
-172.18.0.1 - - [21/Nov/2026:19:51:37 +0000] "GET / HTTP/1.1" 200 896 "-" "curl/7.88.1" "-"
+172.18.0.1 - - [21/Nov/2026:20:29:58 +0000] "GET / HTTP/1.1" 200 896 "-" "curl/7.88.1" "-"
+2026/11/21 20:29:56 [notice] 1#1: using the "epoll" event method
+2026/11/21 20:29:56 [notice] 1#1: nginx/1.30.7
+2026/11/21 20:29:56 [notice] 1#1: built by gcc 15.2.0 (Alpine 15.2.0) 
+2026/11/21 20:29:56 [notice] 1#1: OS: Linux 7.0.0-1017-azure
+2026/11/21 20:29:56 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1024:524288
+2026/11/21 20:29:56 [notice] 1#1: start worker processes
+2026/11/21 20:29:56 [notice] 1#1: start worker process 31
+2026/11/21 20:29:56 [notice] 1#1: start worker process 32
 $ docker stop web
 web
 $ docker rm web
 web
 $ docker ps -a
-CONTAINER ID   IMAGE         COMMAND    CREATED          STATUS                      PORTS     NAMES
-72f912b8d980   hello-world   "/hello"   5 seconds ago    Exited (0) 4 seconds ago              laughing_lederberg
-140dc838c86b   hello-world   "/hello"   52 seconds ago   Exited (0) 50 seconds ago             clever_meitner
+CONTAINER ID   IMAGE         COMMAND    CREATED         STATUS                     PORTS     NAMES
+b302c35f29a4   hello-world   "/hello"   9 seconds ago   Exited (0) 7 seconds ago             kind_wozniak
 ```
 

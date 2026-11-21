@@ -8,15 +8,15 @@ The postgres and python images were pulled before this run, so the pull output i
 
 ```console
 $ ./labs/debug-containers/start/break.sh
-4d2d98483e4ff2bc2a9d9294601bfd625c84b03fb571f6901de8cfa0a74bce2b
-ecf422faf46e76b6124da5edc3750205d1268b84e0f9f878a898ee445a0440d7
-f576d0cacd76e2d158f24fbd3d88c7909b6f15b61df7d1afc718bdbca9400b9a
+9e0a97d4f2d749789718d5e3082412231a63756b20aca365f3cc34e8dcc80bf0
+e4edcd66fa4194861f7f2f3bc162a63888e1c565ca8c53d6c0349b68f149e2ef
+cc65c2e9fc3873c79e70533a4aa7c0a65029998608891e8f6dfceebc828e0284
 Three containers started. Now find out what's wrong: docker ps -a
 $ docker ps -a --filter name=sk-
 CONTAINER ID   IMAGE                       COMMAND                  CREATED          STATUS                        PORTS                                                 NAMES
-f576d0cacd76   python:3.12.16-alpine3.24   "python -c 'print('L…"   11 seconds ago   Exited (137) 10 seconds ago                                                         sk-warmup
-ecf422faf46e   nginx:1.30.7-alpine         "/docker-entrypoint.…"   12 seconds ago   Up 11 seconds                 80/tcp, 0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   sk-web
-4d2d98483e4f   postgres:17.12-alpine       "docker-entrypoint.s…"   15 seconds ago   Exited (1) 6 seconds ago                                                            sk-db
+cc65c2e9fc38   python:3.12.16-alpine3.24   "python -c 'print('L…"   10 seconds ago   Exited (137) 10 seconds ago                                                         sk-warmup
+e4edcd66fa41   nginx:1.30.7-alpine         "/docker-entrypoint.…"   11 seconds ago   Up 10 seconds                 80/tcp, 0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   sk-web
+9e0a97d4f2d7   postgres:17.12-alpine       "docker-entrypoint.s…"   12 seconds ago   Exited (1) 6 seconds ago                                                            sk-db
 ```
 
 ## 2. The crash loop: sk-db
@@ -113,15 +113,15 @@ exit=137 OOMKilled=true limit=67108864
 ```console
 $ ./labs/debug-containers/done/fix.sh
 sk-db
-3811968c6ad0164c3ae3474de8eeb9a8b20432e3e7a9e359d7abbc46516101ea
+a90ea4b17f79bdf05bb81f7097b4cc1d71626f63965363b044461a4d1e190cbc
 sk-web
-ebbabc40daf76f8244852040408a6a8e84ad7f808da6903e5eb07025991626fe
+73471d73aad0aae587238fdc3e04be32a3e1d3c666a967942a6b0b0e39d2345b
 sk-warmup
-5b965faa04b3169a7bd8dcf73e8598ee813d64b42a976c63d3209ee765a2f873
+4ce0ffcd8d512ccf1de9776d2e9e3b767c435d6256f0274692d9f853b14279b6
 $ docker ps -a --filter name=sk- --format '{{.Names}}: {{.Status}}'
 sk-warmup: Exited (0) 10 seconds ago
 sk-web: Up 11 seconds
-sk-db: Up 12 seconds
+sk-db: Up 11 seconds
 $ docker logs sk-warmup
 Loading 150 MB of cart data...
 Warm-up done
@@ -132,8 +132,8 @@ $ curl -s localhost:8081 | head -n 4
 <title>Welcome to nginx!</title>
 $ docker stats --no-stream sk-db sk-web
 CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT     MEM %     NET I/O          BLOCK I/O     PIDS
-3811968c6ad0   sk-db     0.02%     21.65MiB / 125.8GiB   0.02%     866B / 126B      0B / 68.4MB   6
-ebbabc40daf7   sk-web    0.00%     3.578MiB / 125.8GiB   0.00%     1.3kB / 1.64kB   0B / 12.3kB   3
+a90ea4b17f79   sk-db     0.02%     21.59MiB / 125.8GiB   0.02%     866B / 126B      0B / 65.4MB   6
+73471d73aad0   sk-web    0.00%     3.336MiB / 125.8GiB   0.00%     1.3kB / 1.64kB   0B / 12.3kB   3
 ```
 
 ## 6. Clean up

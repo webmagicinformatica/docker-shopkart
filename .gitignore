@@ -2,13 +2,9 @@
 .env
 .env.*
 !.env.example
-!labs/**/env/*.env
 *.pem
 *.key
 secrets/
-!labs/**/secrets/
-labs/**/secrets/*.txt
-!labs/**/secrets/*.example.txt
 
 # Python
 __pycache__/

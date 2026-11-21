@@ -11,4 +11,4 @@ chown -R deploy:deploy /home/deploy/.ssh
 chmod 700 /home/deploy/.ssh && chmod 600 /home/deploy/.ssh/authorized_keys
 ssh-keygen -A >/dev/null
 /usr/sbin/sshd
-exec dockerd-entrypoint.sh --group docker
+exec dockerd-entrypoint.sh --group docker "$@"   # extra args go to dockerd, e.g. --insecure-registry
