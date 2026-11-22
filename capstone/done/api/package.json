@@ -1,0 +1,20 @@
+{
+  "name": "quickbite-api",
+  "version": "1.0.0",
+  "description": "QuickBite orders API",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "8.23.1",
+    "redis": "6.3.1"
+  }
+}

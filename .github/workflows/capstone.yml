@@ -1,0 +1,134 @@
+# The capstone's reference pipeline, run on the reference solution (capstone/done).
+# Same as capstone/done/pipeline.yml except: APP_DIR, the trigger paths, and it only runs in the
+# course repo (in a copy made from the template it shows as skipped; learners add their own
+# .github/workflows/quickbite.yml).
+name: Capstone (QuickBite reference)
+
+on:
+  push:
+    branches: [main]
+    paths: ["capstone/**", ".github/workflows/capstone.yml"]
+  pull_request:
+    paths: ["capstone/**", ".github/workflows/capstone.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write                     # lets GITHUB_TOKEN push to ghcr.io/<owner>/...
+
+env:
+  APP_DIR: capstone/done              # the folder with compose.yaml, api/, worker/, web/
+  TRIVY_IMAGE: aquasec/trivy:0.76.2
+
+jobs:
+  test:
+    if: github.repository == 'webmagicinformatica/docker-shopkart'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.22.3"
+          cache: npm
+          cache-dependency-path: ${{ env.APP_DIR }}/api/package-lock.json
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ${{ env.APP_DIR }}/worker/requirements-dev.txt
+      - name: API tests
+        working-directory: ${{ env.APP_DIR }}/api
+        run: npm ci && npm test
+      - name: Worker tests
+        working-directory: ${{ env.APP_DIR }}/worker
+        run: pip install -r requirements-dev.txt && python -m pytest -q
+
+  build-scan-push:
+    needs: test
+    if: github.repository == 'webmagicinformatica/docker-shopkart'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, worker, web]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+
+      # sha-<commit> always, latest on the default branch
+      - name: Image names and tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/quickbite-${{ matrix.service }}
+          tags: |
+            type=sha,prefix=sha-,priority=850
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # 1. Build into the runner's Docker, reusing layers from earlier runs (one cache per service)
+      - name: Build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.APP_DIR }}/${{ matrix.service }}
+          target: ${{ matrix.service != 'web' && 'runtime' || '' }}
+          load: true
+          tags: quickbite-${{ matrix.service }}:candidate
+          build-args: APP_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=quickbite-${{ matrix.service }}
+          cache-to: type=gha,scope=quickbite-${{ matrix.service }},mode=max
+
+      # 2. Scan: fail on HIGH or CRITICAL vulnerabilities that have a fix
+      - name: Scan with Trivy
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" \
+            image --quiet --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL --scanners vuln \
+            quickbite-${{ matrix.service }}:candidate
+
+      # 3. Push (not for pull requests). Same Dockerfile and cache, so this rebuild is instant.
+      - name: Log in to ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.APP_DIR }}/${{ matrix.service }}
+          target: ${{ matrix.service != 'web' && 'runtime' || '' }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: APP_VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha,scope=quickbite-${{ matrix.service }}
+
+  stack-test:
+    needs: test
+    if: github.repository == 'webmagicinformatica/docker-shopkart'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      # 4. The whole stack, health-gated, and one order end to end
+      - name: Up
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          mkdir -p secrets && openssl rand -hex 16 > secrets/db_password.txt
+          docker compose up -d --build --wait --wait-timeout 180
+          docker compose ps
+      - name: Order end to end
+        run: |
+          id=$(curl -fsS -X POST localhost:8080/api/orders -H 'Content-Type: application/json' \
+                 -d '{"customer":"CI","items":[{"menu_id":1,"qty":2}]}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+          for i in $(seq 30); do
+            status=$(curl -fsS localhost:8080/api/orders/$id | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+            echo "order $id: $status"; [ "$status" = ready ] && exit 0; sleep 1
+          done
+          exit 1
+      - name: Logs and down
+        if: always()
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          docker compose logs --no-color --tail 20
+          docker compose down -v

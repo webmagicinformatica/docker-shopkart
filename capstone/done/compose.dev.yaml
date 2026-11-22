@@ -1,0 +1,44 @@
+# Development: live sync with `compose watch`, debug settings, PostgreSQL reachable from the host.
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait
+#   docker compose -f compose.yaml -f compose.dev.yaml watch
+# Never used in CI or production.
+services:
+  web:
+    read_only: false                       # watch copies files into the container
+    develop:
+      watch:
+        - action: sync
+          path: ./web
+          target: /usr/share/nginx/html
+          ignore: [Dockerfile, nginx.conf]
+        - action: rebuild
+          path: ./web/nginx.conf
+
+  api:
+    read_only: false
+    environment:
+      APP_ENV: dev
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./api/src
+          target: /app/src
+        - action: rebuild
+          path: ./api/package-lock.json
+
+  worker:
+    read_only: false
+    environment:
+      KITCHEN_SECONDS: 1
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./worker/quickbite_worker
+          target: /app/quickbite_worker
+        - action: rebuild
+          path: ./worker/requirements.txt
+
+  db:
+    networks: [backend, frontend]          # the backend network is internal, so a port needs this one too
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"

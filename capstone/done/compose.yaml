@@ -1,0 +1,133 @@
+# QuickBite, the whole stack: web, api, worker, PostgreSQL and Redis.
+#   mkdir -p secrets && openssl rand -hex 16 > secrets/db_password.txt   # once
+#   cp .env.example .env                                                  # optional
+#   docker compose up -d --build --wait
+name: quickbite
+
+# Every service gets the same hardening (YAML anchor, merged with <<:)
+x-hardening: &hardening
+  read_only: true                          # root filesystem is read-only
+  cap_drop: [ALL]                          # no Linux capabilities
+  security_opt: ["no-new-privileges:true"] # setuid binaries can't gain privileges
+  pids_limit: 100                          # no fork bombs
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+
+services:
+  web:
+    <<: *hardening
+    build: ./web
+    image: quickbite-web:${TAG:-local}
+    ports:
+      - "${WEB_PORT:-8080}:8080"           # the only port published to the host
+    tmpfs:
+      - /tmp                               # nginx's pid file and temp files
+    mem_limit: 64m
+    networks: [frontend]
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    <<: *hardening
+    build:
+      context: ./api
+      target: runtime
+      args:
+        APP_VERSION: ${TAG:-local}
+    image: quickbite-api:${TAG:-local}
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      PGHOST: db
+      PGUSER: quickbite
+      PGDATABASE: quickbite
+      PGPASSWORD_FILE: /run/secrets/db_password
+      REDIS_URL: redis://redis:6379/0
+    secrets: [db_password]
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    networks: [frontend, backend]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    <<: *hardening
+    build:
+      context: ./worker
+      target: runtime
+    image: quickbite-worker:${TAG:-local}
+    environment:
+      PGHOST: db
+      PGUSER: quickbite
+      PGDATABASE: quickbite
+      PGPASSWORD_FILE: /run/secrets/db_password
+      REDIS_URL: redis://redis:6379/0
+      KITCHEN_SECONDS: ${KITCHEN_SECONDS:-3}
+    secrets: [db_password]
+    tmpfs:
+      - /tmp                               # the heartbeat file
+    mem_limit: 128m
+    networks: [backend]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy         # the API creates the tables
+
+  db:
+    <<: *hardening
+    image: postgres:17.12-alpine3.24
+    user: postgres                         # uid 70: skip the entrypoint's root-only setup
+    environment:
+      POSTGRES_USER: quickbite
+      POSTGRES_DB: quickbite
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    tmpfs:
+      - /var/run/postgresql                # the server's socket and lock file
+      - /tmp
+    mem_limit: 512m
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "quickbite", "-d", "quickbite"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    <<: *hardening
+    image: redis:8.8.4-alpine3.23
+    user: redis
+    command: ["redis-server", "--appendonly", "yes"]   # queued orders survive a restart
+    volumes:
+      - redis-data:/data
+    mem_limit: 128m
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  frontend: {}
+  backend:
+    internal: true                         # no way in or out except through the api
+
+volumes:
+  db-data:
+  redis-data:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt        # git-ignored; never in an image or in compose.yaml

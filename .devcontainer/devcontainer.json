@@ -7,15 +7,19 @@
       "moby": false,
       "installDockerBuildx": true
     },
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24.22.3"
+    }
   },
   "hostRequirements": {
     "cpus": 2
   },
-  "forwardPorts": [8000, 8080],
+  "forwardPorts": [8000, 8080, 3000],
   "portsAttributes": {
     "8000": { "label": "ShopKart API" },
-    "8080": { "label": "ShopKart web" }
+    "8080": { "label": "ShopKart web" },
+    "3000": { "label": "QuickBite (capstone, no Docker)" }
   },
   "postCreateCommand": "pip install --quiet --disable-pip-version-check -r app/api/requirements-dev.txt",
   "customizations": {

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QuickBite</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>QuickBite</h1>
+    <p>Order food, watch the kitchen cook it.</p>
+  </header>
+  <main>
+    <section>
+      <h2>Menu</h2>
+      <form id="order">
+        <ul id="menu"></ul>
+        <label>Your name <input id="customer" required maxlength="60" placeholder="Asha"></label>
+        <button type="submit">Place order</button>
+        <p id="message" role="status"></p>
+      </form>
+    </section>
+    <section>
+      <h2>Orders</h2>
+      <table>
+        <thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
+        <tbody id="orders"></tbody>
+      </table>
+    </section>
+  </main>
+  <footer id="info"></footer>
+  <script src="app.js"></script>
+</body>
+</html>

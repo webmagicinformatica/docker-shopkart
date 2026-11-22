@@ -13,9 +13,10 @@ browser ──► web (nginx) ──/api──► api (FastAPI) ──► db (Po
 | --- | --- |
 | `app/api` | The API: `shopkart_api/`, `requirements.txt`, `seed.sql`, tests, and the finished `Dockerfile` |
 | `app/web`, `app/nginx` | The front end and its nginx config (`app/web/Dockerfile` bakes both into one image) |
+| `capstone/` | The final project: a new app (QuickBite) to containerize, harden and ship on your own. Start with `BRIEF.md` |
 | `labs/<lab>/` | One folder per lab: `README.md` (the guide), `start/` (you edit this, look for `TODO`), `done/` (the answer), `RUN.md` (a tested run with real output) |
 | `scripts/run-local.sh` | Run ShopKart without Docker |
-| `.devcontainer/` | The codespace: Python 3.12, Docker-in-Docker with Compose and buildx, GitHub CLI |
+| `.devcontainer/` | The codespace: Python 3.12, Node.js 24 (for the capstone), Docker-in-Docker with Compose and buildx, GitHub CLI |
 
 ## 1. Get your own copy
 
@@ -41,6 +42,7 @@ New to Codespaces? Watch the "Set up GitHub Codespaces" lab first. Not using Cod
 | Scan and harden (Part 1 and 2) | [`labs/security`](labs/security) |
 | Production habits: a leak and a slow container | [`labs/production`](labs/production) |
 | CI/CD: pipeline and deploy (Part 1 and 2) | [`labs/ci-cd`](labs/ci-cd) |
+| **Capstone:** containerize and ship QuickBite | [`capstone`](capstone/BRIEF.md) |
 
 Run every command from the repo root unless the guide says `cd`. Each guide ends with a clean-up step: run it, so the next lab starts fresh.
 
