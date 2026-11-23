@@ -87,13 +87,9 @@ Host shopkart-server
   IdentityFile ~/.ssh/shopkart_deploy
   StrictHostKeyChecking accept-new
 CFG
-$ ssh shopkart-server docker version --format 'server engine {{.Server.Version}}'
+$ ssh shopkart-server "docker version --format 'server engine {{.Server.Version}}'"
 Warning: Permanently added '[localhost]:2222' (ED25519) to the list of known hosts.
-docker: 'docker version' accepts no arguments
-
-Usage:  docker version [OPTIONS]
-
-Run 'docker version --help' for more information
+server engine 29.10.0
 ```
 
 ## 5. A Docker context
