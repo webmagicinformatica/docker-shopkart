@@ -70,7 +70,7 @@ Host shopkart-server
   IdentityFile ~/.ssh/shopkart_deploy
   StrictHostKeyChecking accept-new
 CFG
-ssh shopkart-server docker version --format 'server engine {{.Server.Version}}'
+ssh shopkart-server "docker version --format 'server engine {{.Server.Version}}'"
 ```
 
 ### 5. A Docker context: "run my docker commands over there"
