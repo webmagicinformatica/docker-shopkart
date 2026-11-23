@@ -39,6 +39,12 @@ services:
     tmpfs:
       - /tmp
     mem_limit: 256m
+    healthcheck:                 # start/Dockerfile has no HEALTHCHECK, and web waits for a healthy api (already done for you)
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy
